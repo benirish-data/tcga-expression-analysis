@@ -9,10 +9,11 @@ Breast cancer is not a single disease. It comprises at least four molecularly di
 ## Data
 
 - **Source:** TCGA-BRCA cohort via the NCI Genomic Data Commons (GDC)
-- **Samples:** ~1,200 (primary tumor + solid tissue normal)
+- **Samples:** 1,224 total — 1,111 primary tumor, 113 solid tissue normal
+- **Features:** 60,660 genes (Ensembl annotations, includes protein-coding and lncRNAs)
 - **Assay:** RNA-seq gene expression (STAR aligner, raw counts)
 - **Access:** programmatic via the `TCGAbiolinks` R package
-- **Date accessed:** [fill in when your download finishes]
+- **Date accessed:** April 21, 2026
 
 ## Methods
 
