@@ -4,7 +4,7 @@ I built this project to teach myself how to handle real bulk RNA sequencing data
 
 ## Background
 
-In 2000, Dr. Perou and his colleagues at Stanford discovered that breast cancer is not actually a single disease. It comprises at least four distinct subtypes with different treatment needs.  A 2009 follow-up study by Parker et al. produced the PAM50 classifier: a 50-gene signature that reliably assigns a new tumor to one of these subtypes, and the source of the labels I use here. In this project, I reproduced that subtyping using public TCGA data. I then asked whether a largely non-protein-coding class of transcripts (lncRNAs) captures the same pattern or a different one.
+In 2000, Dr. Perou and his colleagues at Stanford discovered that breast cancer is not actually a single disease. It comprises at least four distinct subtypes with different treatment needs. A 2009 follow-up study by Parker et al. produced the PAM50 classifier: a 50-gene signature that reliably assigns a new tumor to one of these subtypes, and the source of the labels I use here. In this project, I reproduced that subtyping using public TCGA data. I then asked whether a largely non-protein-coding class of transcripts (lncRNAs) captures the same pattern or a different one.
 
 ## Data
 
@@ -28,9 +28,7 @@ A few choices worth flagging:
 
 - **Gene filtering deferred to the analysis step.** The cleaning script keeps all genes. Filtering happens per-analysis because DESeq2, limma-voom, PCA, and clustering each benefit from different filters.
 
-- Protein-coding genes only for the main analysis. Both the original subtype discovery (Perou 2000) and the PAM50 classifier (Parker 2009) are defined on protein-coding genes. The lncRNA analysis runs the same pipeline on the non-coding subset separately.
-
-
+- **Protein-coding genes only for the main analysis.** Both the original subtype discovery (Perou 2000) and the PAM50 classifier (Parker 2009) are defined on protein-coding genes. The lncRNA analysis runs the same pipeline on the non-coding subset separately.
 
 **Parameters and thresholds:**
 
@@ -44,27 +42,30 @@ A few choices worth flagging:
 
 Unsupervised clustering on variable-gene expression partially recovers PAM50 subtypes (ARI = 0.35).
 
-Basal tumors separate cleanly — 185 of 190 land in a single cluster. But Basal is known to be the most distinct subtype.
+Basal tumors separate cleanly — 185 of 190 land in a single cluster. Basal is known to be the most distinct subtype, so this is expected.
 
 HER2 is messier. 52 of 82 form their own cluster, but about a third get pulled into the luminal group. That's consistent with HER2+ tumors often co-expressing hormone receptors.
 
 The hard case is Luminal A vs. Luminal B. Unsupervised clustering doesn't separate them — they end up mixed together in one cluster, with a second cluster holding what looks like pure LumA. This isn't surprising. The LumA/LumB distinction depends on proliferation genes that PAM50's trained 50-gene signature picks up, but variance-based clustering on ~2,000 genes doesn't. To reliably tell them apart, you need a supervised method.
 
-The lncRNA analysis is still to come.
+The lncRNA analysis was a bit more interesting. Despite using only the ~2,000 lncRNAs that survived expression filtering (versus a much larger pool of ~17,000 protein-coding genes), lncRNAs recover PAM50 subtypes essentially as well as protein-coding genes do (ARI 0.353 vs. 0.347). Basal isolates cleanly in both. HER2 partially splits in both. LumA/LumB mix in both.
+
+The two clusterings moderately agree with each other (ARI 0.29): both recover Basal the same way, but they disagree on which specific luminal tumors belong with which. That suggests lncRNAs and protein-coding genes see partially different aspects of the biology, even when the clusters they produce look similar overall.
 
 ## Project Structure
 tcga-expression-analysis/
 ├── R/
-│   ├── 01_download.R     # Download raw TCGA-BRCA data from GDC
-│   ├── 02_clean.R        # Attach subtype labels, deduplicate patients
-│   ├── 03_de_limma.R     # Differential expression (tumor vs normal) via limma-voom
-│   └── 04_cluster.R      # PCA and hierarchical clustering by PAM50 subtype
+│   ├── 01_download.R          # Download raw TCGA-BRCA data from GDC
+│   ├── 02_clean.R             # Attach subtype labels, deduplicate patients
+│   ├── 03_de_limma.R          # Differential expression (tumor vs normal) via limma-voom
+│   ├── 04_cluster.R           # PCA and hierarchical clustering by PAM50 subtype
+│   └── 05_cluster_lncrna.R    # Repeat clustering on lncRNAs; compare to protein-coding
 ├── data/
-│   ├── raw/              # Raw downloaded data (gitignored)
-│   └── processed/        # Cleaned and analyzed objects (gitignored)
-├── figures/              # Exported plots
-├── analysis.qmd          # Main Quarto report (narrative + figures)
-├── renv.lock             # Pinned package versions
+│   ├── raw/                   # Raw downloaded data (gitignored)
+│   └── processed/             # Cleaned and analyzed objects (gitignored)
+├── figures/                   # Exported plots
+├── analysis.qmd               # Main Quarto report (narrative + figures)
+├── renv.lock                  # Pinned package versions
 └── README.md
 
 ## Reproducibility
@@ -74,9 +75,9 @@ tcga-expression-analysis/
 3. Run `renv::restore()` in the Console to install the exact package versions used
 4. Source scripts in `R/` in numerical order
 
-The download step (`01_download.R`) requires ~5 GB of disk space and 30 min – 2 hr depending on connection speed. Subsequent scripts load cached data and run in a few minutes each, except 03_de_limma.R, which runs limma-voom on the full cohort and takes a few minutes.
+The download step (`01_download.R`) requires ~5 GB of disk space and 30 min – 2 hr depending on connection speed. All downstream scripts load cached data and complete within a few minutes each.
 
-Memory note: assembling the full SummarizedExperiment can exceed R's default 16 GB vector memory limit on macOS. The scripts set `mem.maxVSize(32000)` at the top to handle this.
+Memory note: assembling the full SummarizedExperiment (script 01) can exceed R's default 16 GB vector memory limit on macOS; the scripts raise it at the top.
 
 ## Tech Stack
 
