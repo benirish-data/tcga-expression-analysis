@@ -53,6 +53,7 @@ The lncRNA analysis was a bit more interesting. Despite using only the ~2,000 ln
 The two clusterings moderately agree with each other (ARI 0.29): both recover Basal the same way, but they disagree on which specific luminal tumors belong with which. That suggests lncRNAs and protein-coding genes see partially different aspects of the biology, even when the clusters they produce look similar overall.
 
 ## Project Structure
+```
 tcga-expression-analysis/
 ├── R/
 │   ├── 01_download.R          # Download raw TCGA-BRCA data from GDC
@@ -67,6 +68,7 @@ tcga-expression-analysis/
 ├── analysis.qmd               # Main Quarto report (narrative + figures)
 ├── renv.lock                  # Pinned package versions
 └── README.md
+```
 
 ## Reproducibility
 
