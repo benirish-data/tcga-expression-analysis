@@ -1,0 +1,103 @@
+---
+title: "Breast Cancer Subtyping: Protein-Coding vs. lncRNA Expression"
+author: "Ben Irish"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    theme: cosmo
+    fig-width: 7
+    fig-height: 5
+    fig-align: center
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(SummarizedExperiment)
+library(dplyr)
+library(ggplot2)
+
+brca     <- readRDS("data/processed/brca_clean_SE.rds")
+vst_mat  <- readRDS("data/processed/vst_matrix.rds")
+de_res   <- readRDS("data/processed/de_results_tumor_vs_normal.rds")
+clus_pc  <- readRDS("data/processed/hclust_assignments.rds")
+clus_lnc <- readRDS("data/processed/hclust_assignments_lncrna.rds")
+pca_pc   <- readRDS("data/processed/pca_tumor_pc.rds")
+pca_lnc  <- readRDS("data/processed/pca_tumor_lncrna.rds")
+```
+
+# The question
+
+Breast cancer isn't just one disease, but a grouping of several distinct types of tumors. By the early 2000s studies showed that tumors fall into at least four molecular subtypes: Luminal A, Luminal B, HER2+, and Basal-like. That subtype largely determines each patient's treatment. The subtypes were originally discovered in protein-coding gene expression data, and the PAM50 classifier that assigns them today is built from 50 protein-coding genes.
+
+In this project I wanted to do two things. First, to reproduce the canonical result that tumors really do separate into those four subtypes if they are clustered based purely on their expression patterns. As a reproduction of known work, that was a chance to practice the whole bulk RNA-seq pipeline on real public data and to improve at bioinformatics. I also wanted to ask a less explored question: how does the structure recovered from unsupervised clustering on lncRNAs compare to the same clustering on protein-coding genes? lncRNAs are a largely non-protein-coding class of transcripts that regulate gene expression without being translated into protein, and they weren't well annotated when the subtypes were first discovered. If they recover the same subtype structure, that reveals something interesting about where subtype biology lives.
+
+# The data
+
+I acquired the breast cancer cohort (TCGA-BRCA) from the Genomic Data Commons using the `TCGAbiolinks` R package. After patient-level deduplication (keeping one sample per patient even if they had multiple samples of the same type, breaking ties on library size), the dataset was 1,208 samples: 1,095 primary tumors and 113 solid tissue normal samples. Ensembl-annotated genes in the raw data totaled 60,660. The PAM50 subtype distribution across tumors was 562 Luminal A, 209 Luminal B, 190 Basal, 82 HER2+, 40 Normal-like, and 12 unclassified. These proportions match published TCGA-BRCA breakdowns, which was the first clear sign that I downloaded the data correctly.
+
+# Part 1: Do tumors cluster by subtype?
+
+## Differential expression: tumor vs. normal
+Before doing any clustering, I ran a differential expression (DE) analysis comparing the 1,095 tumors to the 113 normals using limma-voom. This isn't strictly needed for subtype discovery, since the PAM50 approach is about clustering within tumors, but it's useful as a sanity check. If the top differentially expressed genes look  reasonable, I can trust the rest of the pipeline.
+
+---
+
+```{r}
+#| label: fig-volcano
+#| fig-cap: "Tumor vs. normal differential expression (limma-voom). Each point is one gene. Red points are significant at padj < 0.05 and |log2FC| > 1."
+
+library(ggrepel)
+
+top_labels <- de_res |>
+  arrange(padj) |>
+  slice(1:10) |>
+  mutate(neg_log10_padj = -log10(padj))
+
+volcano_df <- de_res |>
+  mutate(
+    neg_log10_padj = -log10(padj),
+    significant    = padj < 0.05 & abs(log2FoldChange) > 1
+  ) |>
+  filter(!is.na(padj))
+
+ggplot(volcano_df, aes(log2FoldChange, neg_log10_padj)) +
+  geom_point(aes(color = significant), alpha = 0.4, size = 0.8) +
+  scale_color_manual(values = c("grey70", "firebrick"), guide = "none") +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", color = "grey40") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "grey40") +
+  geom_text_repel(
+    data = top_labels,
+    aes(label = gene_name),
+    size = 3,
+    max.overlaps = Inf
+  ) +
+  labs(
+    x = "log2 fold change (tumor vs. normal)",
+    y = "-log10 adjusted p-value"
+  ) +
+  theme_minimal(base_size = 12)
+
+```
+
+---
+
+About 13,800 genes come out as significant at adjusted p < 0.05, and 4,345 of those pass a stricter |log2 fold change| > 1 filter. Given 1,208 samples, there is enough statistical power that even small differences are determined significant. That is why the fold-change filter matters. The top genes include VEGFD, LYVE1, CD300LG (vasculature and lymphatics), and SCARA5 and ABCA10 (stromal and adipose tissue). These are genes that normal breast tissue is expected to express and that tumor tissue is expected to displace. So the most dramatic differences between the tissue types are largely about tissue composition, because tumors replace vasculature-rich fatty stroma of normal breast with epithelial tumor cells.
+Known breast cancer markers show up too, but not always at the top. MKI67 (proliferation) is strongly up in tumor (log2FC +3.3, padj ~10⁻⁶³), as expected. ERBB2 (HER2) is up somewhat (log2FC +1.2), dragged up by the HER2+ fraction of the cohort. Surprisingly, ESR1 (the estrogen receptor gene and arguably the most important gene in breast cancer) comes back at padj ~0.10 and log2FC +0.5, which is not significant. When viewed initially, that looks wrong. But it's actually an example of how subtype heterogeneity can hide a real signal. ESR1 is high in ER-positive tumors (about 70% of the cohort) and low in ER-negative tumors. When averaging across all tumors, those effects cancel out. This kind of observation motivates the next section: stratifying tumors by subtype, which should reveal structure that is erased by just averaging across them.
+
+# Part 2: Do lncRNAs see the same structure?
+
+*(To be written.)*
+
+# Discussion
+
+*(To be written.)*
+
+# Methods
+
+*(To be written.)*
+---
