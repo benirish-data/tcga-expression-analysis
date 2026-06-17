@@ -57,13 +57,16 @@ sample_meta <- sample_meta |>
   slice_max(lib_size, n = 1, with_ties = FALSE) |>
   ungroup()
 
+# Ensure the SummarizedExperiment has barcode-based column names.
+colnames(brca_raw) <- brca_raw$barcode
+
 brca_clean <- brca_raw[, sample_meta$barcode]
 
 # Reattach metadata; match() guarantees row order aligns with colnames.
 colData(brca_clean) <- DataFrame(
-  sample_meta[match(colnames(brca_clean), sample_meta$barcode), ]
+  sample_meta[match(colnames(brca_clean), sample_meta$barcode), ],
+  row.names = colnames(brca_clean)
 )
-
 
 # --- 5. Save -------------------------------------------------------------
 

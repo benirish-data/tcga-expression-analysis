@@ -1,1 +1,14 @@
-.Rproj.user
+.Rproj.user/
+.Rhistory
+.RData
+.RDataTmp
+.Ruserdata
+.DS_Store
+**/.DS_Store
+*.rds
+data/
+analysis_files/
+analysis.html
+MANIFEST.txt
+renv/library/
+renv/staging/
